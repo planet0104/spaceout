@@ -9,8 +9,8 @@ Rust WebAssembly 入门参考这里：https://www.hellorust.com/setup/wasm-targe
 <b>游戏引擎部分:</b><br />
 <i>src/engine.rs</i> 游戏引擎<br />
 <i>src/sprite.rs</i> 精灵<br />
-<i>src/timer.rs</i> 计时器<br />
-<b>SpaceOut游戏</b><br /><br />
+<i>src/timer.rs</i> 计时器<br /><br />
+<b>SpaceOut游戏</b><br />
 <i>src/game.rs</i> 游戏主代码<br />
 <i>src/alien_sprite.rs</i> 外星人<br />
 <i>src/backgkround.rs</i> 星星闪烁的背景<br /><br />
