@@ -4,8 +4,8 @@ Rust+WebAssembly开发的一个小游戏<br/>
 <img src="https://img3.doubanio.com/lpic/s26278533.jpg" /><br />
 代码结构:<br /><br />
 <b>html部分:</b><br />
-<i>html</i> 游戏资源文件和HTML文件<br />
-<b>游戏引擎:</b><br /><br />
+<i>html</i> 游戏资源文件和HTML文件<br /><br />
+<b>游戏引擎部分:</b><br />
 <i>src/engine.rs</i> 游戏引擎<br />
 <i>src/sprite.rs</i> 精灵<br />
 <i>src/timer.rs</i> 计时器<br />
