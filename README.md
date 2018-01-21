@@ -14,7 +14,8 @@ Rust WebAssembly 入门参考这里：https://www.hellorust.com/setup/wasm-targe
 <i>src/game.rs</i> 游戏主代码<br />
 <i>src/alien_sprite.rs</i> 外星人<br />
 <i>src/backgkround.rs</i> 星星闪烁的背景<br /><br />
-编译:<br />
+<b>编译</b><br />
 cargo  +nightly build --target wasm32-unknown-unknown --release<br />
 copy target\wasm32-unknown-unknown\release\spaceout.wasm html\spaceout.wasm<br />
-然后浏览器打开html/index.html就可以运行了。<br />
+然后浏览器打开html/index.html就可以运行了。<br /><br />
+另外，我是一个Rust新手，很多代码可能写的不太好，大家请包涵；）
