@@ -391,27 +391,27 @@ impl SpaceOut{
             set_canvas_size(CLIENT_WIDTH, CLIENT_HEIGHT);
             on_window_resize();
             set_text_size("20px Arial".as_bytes());
-            add_resource(RES_SPLASH_BITMAP, "Splash1.png".as_ptr());
-            add_resource(RES_DESERT_BITMAP, "Desert.png".as_ptr());
-            add_resource(RES_CAR_BITMAP, "Car.png".as_ptr());
-            add_resource(RES_SM_CAR_BITMAP, "SmCar.png".as_ptr());
-            add_resource(RES_MISSILE_BITMAP, "Missile.png".as_ptr());
-            add_resource(RES_BLOBBO_BITMAP, "Blobbo.png".as_ptr());
-            add_resource(RES_BMISSILE_BITMAP, "BMissile.png".as_ptr());
-            add_resource(RES_JELLY_BITMAP, "Jelly.png".as_ptr());
-            add_resource(RES_JMISSILE_BITMAP, "JMissile.png".as_ptr());
-            add_resource(RES_TIMMY_BITMAP, "Timmy.png".as_ptr());
-            add_resource(RES_TMISSILE_BITMAP, "TMissile.png".as_ptr());
-            add_resource(RES_SM_EXPLOSION_BITMAP, "SmExplosion.png".as_ptr());
-            add_resource(RES_LG_EXPLOSION_BITMAP, "LgExplosion.png".as_ptr());
-            add_resource(RES_GAME_OVER_BITMAP, "GameOver.png".as_ptr());
+            add_resource_url(RES_SPLASH_BITMAP, "Splash1.png".as_bytes());
+            add_resource_url(RES_DESERT_BITMAP, "Desert.png".as_bytes());
+            add_resource_url(RES_CAR_BITMAP, "Car.png".as_bytes());
+            add_resource_url(RES_SM_CAR_BITMAP, "SmCar.png".as_bytes());
+            add_resource_url(RES_MISSILE_BITMAP, "Missile.png".as_bytes());
+            add_resource_url(RES_BLOBBO_BITMAP, "Blobbo.png".as_bytes());
+            add_resource_url(RES_BMISSILE_BITMAP, "BMissile.png".as_bytes());
+            add_resource_url(RES_JELLY_BITMAP, "Jelly.png".as_bytes());
+            add_resource_url(RES_JMISSILE_BITMAP, "JMissile.png".as_bytes());
+            add_resource_url(RES_TIMMY_BITMAP, "Timmy.png".as_bytes());
+            add_resource_url(RES_TMISSILE_BITMAP, "TMissile.png".as_bytes());
+            add_resource_url(RES_SM_EXPLOSION_BITMAP, "SmExplosion.png".as_bytes());
+            add_resource_url(RES_LG_EXPLOSION_BITMAP, "LgExplosion.png".as_bytes());
+            add_resource_url(RES_GAME_OVER_BITMAP, "GameOver.png".as_bytes());
 
-            add_resource(RES_BMISSILE_SOUND, "BMissile.ogg".as_ptr());
-            add_resource(RES_GAMEOVER_SOUND, "GameOver.ogg".as_ptr());
-            add_resource(RES_JMISSILE_SOUND, "JMissile.ogg".as_ptr());
-            add_resource(RES_MISSILE_SOUND, "Missile.ogg".as_ptr());
-            add_resource(RES_LG_EXPLODE_SOUND, "LgExplode.ogg".as_ptr()); 
-            add_resource(RES_SM_EXPLODE_SOUND, "SmExplode.ogg".as_ptr());
+            add_resource_url(RES_BMISSILE_SOUND, "BMissile.ogg".as_bytes());
+            add_resource_url(RES_GAMEOVER_SOUND, "GameOver.ogg".as_bytes());
+            add_resource_url(RES_JMISSILE_SOUND, "JMissile.ogg".as_bytes());
+            add_resource_url(RES_MISSILE_SOUND, "Missile.ogg".as_bytes());
+            add_resource_url(RES_LG_EXPLODE_SOUND, "LgExplode.ogg".as_bytes()); 
+            add_resource_url(RES_SM_EXPLODE_SOUND, "SmExplode.ogg".as_bytes());
             
             load_resource();
         }
@@ -492,7 +492,7 @@ extern {
     pub fn set_canvas_size(width:i32, height:i32);
     pub fn set_canvas_margin(left:i32, top:i32, right:i32, bottom:i32);
     pub fn set_canvas_style_size(width:i32, height:i32);
-    pub fn add_resource(resId:i32, ptr: *const u8);
+    pub fn add_resource(res_id:i32);
     pub fn current_time()->f64;
     pub fn random()->f64;
     pub fn load_resource();
@@ -548,6 +548,11 @@ pub fn draw_text(s: &[u8], x:i32, y:i32){
 pub fn set_text_size(s: &[u8]){
     write_string(s);
     unsafe{ set_canvas_font(); }
+}
+
+pub fn add_resource_url(res_id:i32, s: &[u8]){
+    write_string(s);
+    unsafe{ add_resource(res_id); }
 }
 
 pub fn log_number(n:i32){

@@ -95,9 +95,8 @@
             request_animation_frame: function(){
                 window.requestAnimationFrame(Game.draw_frame, myCanvas);
             },
-            add_resource: function(resId, url){
-                var url = copyCStr(Game, url);
-                Game.resUrlMap.set(resId, url);
+            add_resource: function(resId){
+                Game.resUrlMap.set(resId, Game.readStringBuffer());
             },
             //播放一个声音
             play_sound: function(resId){
