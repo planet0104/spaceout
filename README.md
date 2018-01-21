@@ -1,1 +1,1 @@
-# spaceout
+# spaceout a rust wasm game

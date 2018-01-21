@@ -1,0 +1,10 @@
+[package]
+name = "spaceout"
+version = "0.1.0"
+authors = ["Jia Ye <planet0104@gmail.com>"]
+
+[lib]
+path = "src/game.rs"
+crate-type = ["cdylib"]
+
+[dependencies]

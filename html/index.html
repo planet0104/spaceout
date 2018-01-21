@@ -1,0 +1,200 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no">
+        <meta charset="utf-8">
+        <script src="utils.js"></script>
+    </head>
+<body style="padding:0px;margin:0" onresize="Game.on_window_resize()">
+<audio id="myAudio"></audio>
+<canvas id="myCanvas" style="background:#ccc;"></canvas>
+<script>
+    //声音播放
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    //绘图画布
+    var myCanvas = document.getElementById('myCanvas');
+    var myAudio = document.getElementById('myAudio');
+    var ctx = myCanvas.getContext("2d");
+    var stringBuffer = new ArrayBuffer(1024);
+    
+    window.Game = {
+        resUrlMap: new Map(),
+        //这里的事件ID和Rust代码中一致(应该可以直接导出的，但是我没找到方法)
+        EVENT_MOUSE_MOVE: 0,
+        EVENT_MOUSE_CLICK: 1,
+        EVENT_TOUCH_MOVE: 10,
+        //字符串缓存
+        stringBufferView: new DataView(stringBuffer),
+        
+        readStringBuffer: function(){
+            var ptr = 0;
+            const collectCString = function* () {
+                var memory = new Uint8Array(stringBuffer);
+                while (memory[ptr] !== 0) {
+                    if (memory[ptr] === undefined) { throw new Error("Tried to read undef mem") }
+                    yield memory[ptr]
+                    ptr += 1
+                }
+            }
+
+            const buffer_as_u8 = new Uint8Array(collectCString())
+            const utf8Decoder = new TextDecoder("UTF-8");
+            const buffer_as_utf8 = utf8Decoder.decode(buffer_as_u8);
+            return buffer_as_utf8
+        }
+    }
+
+    //注册事件监听
+    myCanvas.addEventListener("mousemove", function(event){
+        Game.on_touch_event(Game.EVENT_MOUSE_MOVE, event.clientX, event.clientY);
+    });
+    myCanvas.addEventListener("click", function(event){
+        Game.on_touch_event(Game.EVENT_MOUSE_CLICK, event.clientX, event.clientY);
+    });
+    myCanvas.addEventListener("touchmove", function(event){
+        Game.on_touch_event(Game.EVENT_TOUCH_MOVE, event.touches[0].clientX, event.touches[0].clientY);
+    });
+
+    //下面是要导入webassembly的JS帮助函数
+    //以后如果webassembly有了DOM的API，可以省去一些
+    const imports = {
+        env: {
+            log: function(){
+                console.log(Game.readStringBuffer());
+            },
+            log_int: function(o){
+                console.log(o);
+            },
+            write_buffer: function(ptr, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15){
+                Game.stringBufferView.setUint8(ptr, b0);
+                Game.stringBufferView.setUint8(ptr+1, b1);
+                Game.stringBufferView.setUint8(ptr+2, b2);
+                Game.stringBufferView.setUint8(ptr+3, b3);
+                Game.stringBufferView.setUint8(ptr+4, b4);
+                Game.stringBufferView.setUint8(ptr+5, b5);
+                Game.stringBufferView.setUint8(ptr+6, b6);
+                Game.stringBufferView.setUint8(ptr+7, b7);
+                Game.stringBufferView.setUint8(ptr+8, b8);
+                Game.stringBufferView.setUint8(ptr+9, b9);
+                Game.stringBufferView.setUint8(ptr+10, b10);
+                Game.stringBufferView.setUint8(ptr+11, b11);
+                Game.stringBufferView.setUint8(ptr+12, b12);
+                Game.stringBufferView.setUint8(ptr+13, b13);
+                Game.stringBufferView.setUint8(ptr+14, b14);
+                Game.stringBufferView.setUint8(ptr+15, b15);
+            },
+            current_time: function(){
+                return Date.now();
+            },
+            get_window_width: function(){ return window.innerWidth; },
+            get_window_height: function(){ return window.innerHeight; },
+            random: function(){
+                return Math.random();
+            },
+            request_animation_frame: function(){
+                window.requestAnimationFrame(Game.draw_frame, myCanvas);
+            },
+            add_resource: function(resId, url){
+                var url = copyCStr(Game, url);
+                Game.resUrlMap.set(resId, url);
+            },
+            //播放一个声音
+            play_sound: function(resId){
+                try{
+                    var source = audioCtx.createBufferSource();
+                    source.buffer = Game.resMap.get(resId);
+                    source.connect(audioCtx.destination);
+                    source.start(0);
+                }catch(e){
+                    console.log(e);
+                }
+            },
+            //播放一个背景音乐
+            play_music: function(){
+                var url = Game.readStringBuffer();
+                if(myAudio.src == url){
+                    if(myAudio.networkState == 1){
+                        myAudio.play();
+                    }
+                }else{
+                    myAudio.src = url;
+                    myAudio.play();
+                    myAudio.loop = true;
+                    myAudio.preload = true;
+                }
+            },
+            //停止播放背景音乐
+            pause_music: function(){
+                myAudio.pause();
+            },
+            load_resource: function(){
+                loadResources(Game.resUrlMap, function(map){
+                    Game.resMap = map;
+                    Game.on_resources_load();
+                }, function(n1, n2){
+                    Game.on_load_resource_progress(n1, n2);
+                    //console.log("资源加载中("+n1+"/"+n2+")");
+                });
+            },
+            set_canvas_size: function(width, height){
+                myCanvas.width = width;
+                myCanvas.height = height;
+            },
+            set_canvas_margin: function(left, top, right, bottom){
+                myCanvas.style.marginLeft = left+'px';
+                myCanvas.style.marginTop = top+'px';
+                myCanvas.style.marginRight = right+'px';
+                myCanvas.style.marginBottom = bottom+'px';
+            },
+            set_canvas_style_size: function(width, height){
+                myCanvas.style.width = width+'px';
+                myCanvas.style.height = height+'px';
+            },
+            set_canvas_font: function(){
+                ctx.font = Game.readStringBuffer();
+            },
+            //导入用到的canvas绘图函数
+            fill_style_rgb: function(r, g, b){
+                ctx.fillStyle = "rgb("+r+", "+g+", "+b+")";
+            },
+            fill_style_color: function(color){
+                
+            },
+            fill_rect: function(x, y, width, height){
+                ctx.fillRect(x, y, width, height);
+            },
+            fill_text: function(x, y){
+                ctx.fillText(Game.readStringBuffer(), x, y);
+            },
+            draw_image_at: function(resId, x, y){
+                ctx.drawImage(Game.resMap.get(resId), x, y);
+            },
+            draw_image: function(resId, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight){
+                ctx.drawImage(Game.resMap.get(resId), sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight);
+            }
+        }
+    };
+
+    //加载游戏的wasm代码
+    fetch("spaceout.wasm").then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, imports)
+    ).then(results =>
+      results.instance
+    ).then(mod => {
+        //引用wasm导出的函数
+        Game.memory = mod.exports.memory;
+        Game.dealloc_str = mod.exports.dealloc_str;
+        Game.on_resources_load = mod.exports.on_resources_load;
+        Game.draw_frame = mod.exports.draw_frame;
+        Game.on_touch_event = mod.exports.on_touch_event;
+        Game.on_load_resource_progress = mod.exports.on_load_resource_progress;
+        Game.on_window_resize = mod.exports.on_window_resize;
+        //启动游戏
+        mod.exports.run();
+    });
+</script>
+</body>
+</html>
