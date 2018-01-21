@@ -40,7 +40,7 @@ pub const RES_JMISSILE_SOUND:i32 = 102;
 pub const RES_LG_EXPLODE_SOUND:i32 = 103;
 pub const RES_SM_EXPLODE_SOUND:i32 = 104;
 pub const RES_MISSILE_SOUND:i32 = 105;
-pub const URL_BACKGROUND_MUSIC:&str = "music.mp3";
+pub const URL_BACKGROUND_MUSIC:&str = "Music.mp3";
 
 //-----------------------------------
 //-------------事件ID----------------
