@@ -1,5 +1,6 @@
 # spaceout a rust wasm game
 Rust+WebAssembly开发的一个小游戏<br/>
+<img src="https://raw.githubusercontent.com/planet0104/spaceout/master/spaceout.png" /><br />
 游戏源码参考《游戏编程入门》：<br />
 <img src="https://img3.doubanio.com/lpic/s26278533.jpg" /><br /><br />
 Rust WebAssembly 入门参考这里：https://www.hellorust.com/setup/wasm-target/<br /><br />
