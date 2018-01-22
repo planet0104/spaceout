@@ -353,32 +353,37 @@ impl SpaceOut{
                 if self.demo{
                     return;
                 }
-                //移动汽车
-                match self.last_touch{
-                    Some(touch_point) => {
-                        //判断滑动方向
-                        if touch_point.x > x{ self.drive_left = cmp::min(self.drive_left+1, DRIVE_THRESHOLD+1);  }//向左
-                        if touch_point.x < x{ self.drive_right = cmp::min(self.drive_right+1, DRIVE_THRESHOLD+1); }//向右
-                        
-                        //判断是否执行
-                        let satisfied = self.drive_left>DRIVE_THRESHOLD || self.drive_right>DRIVE_THRESHOLD;
 
-                        let mut car_sprite = self.engine.get_sprite(self.car_sprite_id).unwrap();
-                        let (vx, vy) = (car_sprite.velocity().x, car_sprite.velocity().y);
-                        if self.drive_left > DRIVE_THRESHOLD {
-                            // Move Left
-                            car_sprite.set_velocity(cmp::max(vx-3, -6), vy);
-                        }else if self.drive_right > DRIVE_THRESHOLD {
-                            // Move Right
-                            car_sprite.set_velocity(cmp::min(vx+3, 6), vy);
-                        }
-                        if satisfied {
-                            self.drive_left = 0;
-                            self.drive_right = 0;
-                        }
-                    }
-                    _ => self.last_touch = Some(Point{x:x, y:y})
-                }
+                let mut car_sprite = self.engine.get_sprite(self.car_sprite_id).unwrap();
+                let pos = *car_sprite.position();
+                car_sprite.set_position(x, pos.top);
+
+                //移动汽车
+                // match self.last_touch{
+                //     Some(touch_point) => {
+                //         //判断滑动方向
+                //         if touch_point.x > x{ self.drive_left = cmp::min(self.drive_left+1, DRIVE_THRESHOLD+1);  }//向左
+                //         if touch_point.x < x{ self.drive_right = cmp::min(self.drive_right+1, DRIVE_THRESHOLD+1); }//向右
+                        
+                //         //判断是否执行
+                //         let satisfied = self.drive_left>DRIVE_THRESHOLD || self.drive_right>DRIVE_THRESHOLD;
+
+                //         let mut car_sprite = self.engine.get_sprite(self.car_sprite_id).unwrap();
+                //         let (vx, vy) = (car_sprite.velocity().x, car_sprite.velocity().y);
+                //         if self.drive_left > DRIVE_THRESHOLD {
+                //             // Move Left
+                //             car_sprite.set_velocity(cmp::max(vx-3, -6), vy);
+                //         }else if self.drive_right > DRIVE_THRESHOLD {
+                //             // Move Right
+                //             car_sprite.set_velocity(cmp::min(vx+3, 6), vy);
+                //         }
+                //         if satisfied {
+                //             self.drive_left = 0;
+                //             self.drive_right = 0;
+                //         }
+                //     }
+                //     _ => self.last_touch = Some(Point{x:x, y:y})
+                // }
             }
 
             _ => ()
