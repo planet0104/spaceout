@@ -603,7 +603,6 @@ pub fn draw_frame() {
     let game = game();
     if  game.engine.ready_for_next_frame(){
             game.game_cycle();
-            game.game_paint();
     }
     unsafe { request_animation_frame(); }
 }
