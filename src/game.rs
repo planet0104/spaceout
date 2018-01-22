@@ -353,10 +353,19 @@ impl SpaceOut{
                 if self.demo{
                     return;
                 }
-
+                //直接拖动控制
+                let (window_width, window_height) = unsafe { (get_window_width(), get_window_height()) };
+                let (canvas_style_width, canvas_style_height) = 
+                    if window_width < window_height{
+                        //竖屏
+                        (window_width, (window_width as f32/CLIENT_WIDTH as f32 * CLIENT_HEIGHT as f32) as i32)
+                    }else{
+                        ((window_height as f32/CLIENT_HEIGHT as f32 * CLIENT_WIDTH as f32) as i32, window_height)
+                    };
                 let mut car_sprite = self.engine.get_sprite(self.car_sprite_id).unwrap();
                 let pos = *car_sprite.position();
-                car_sprite.set_position(x, pos.top);
+                let left = CLIENT_WIDTH as f32/canvas_style_width as f32 * (x -unsafe { get_canvas_offset_left() }) as f32;
+                car_sprite.set_position(left as i32, pos.top);
 
                 //移动汽车
                 // match self.last_touch{
@@ -497,6 +506,7 @@ extern {
     pub fn set_canvas_size(width:i32, height:i32);
     pub fn set_canvas_margin(left:i32, top:i32, right:i32, bottom:i32);
     pub fn set_canvas_style_size(width:i32, height:i32);
+    pub fn get_canvas_offset_left()->i32;
     pub fn add_resource(res_id:i32);
     pub fn current_time()->f64;
     pub fn random()->f64;
