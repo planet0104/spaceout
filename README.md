@@ -21,4 +21,4 @@ copy target\wasm32-unknown-unknown\release\spaceout.wasm html\spaceout.wasm<br /
 然后浏览器打开html/index.html就可以运行了。<br /><br />
 游戏可以在我的github空间玩：http://fangte.site/spaceout/<br /><br />
 作为对比，这是我之前写的javascript版本：http://fangte.site/spaceout_js/<br /><br />
-另外，我是一个Rust新手，很多代码可能写的不太好，大家请包涵；）
+另外，我是一个Rust新手，很多代码可能写的不太好，请酌情参考；）
