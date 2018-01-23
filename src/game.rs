@@ -176,9 +176,6 @@ impl SpaceOut{
 
             //更新精灵
             self.engine.update_sprites();
-
-            //绘制游戏
-            self.game_paint();
         }else{
             self.game_over_delay -= 1;
             if self.game_over_delay == 0{
@@ -188,6 +185,8 @@ impl SpaceOut{
                 self.new_game();
             }
         }
+        //绘制游戏
+        self.game_paint();
     }
 
     //游戏绘制
