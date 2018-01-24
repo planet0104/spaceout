@@ -68,6 +68,7 @@ pub struct SpaceOut{
     last_touch: Option<Point>,
     drive_left:i32,
     drive_right:i32,
+    start_time: f64,
 }
 
 impl SpaceOut{
@@ -86,6 +87,7 @@ impl SpaceOut{
             last_touch: None,
             drive_left: 0,
             drive_right: 0,
+            start_time: unsafe { current_time() }
         }
     }
 
@@ -601,7 +603,14 @@ pub fn on_load_resource_progress(current:i32, total:i32){
 pub fn draw_frame() {
     let game = game();
     if  game.engine.ready_for_next_frame(){
-            game.game_cycle();
+        game.game_cycle();
+
+        //绘制帧率
+        /*
+        let elapsed = unsafe {current_time()} - game.start_time;
+        draw_text(&format!("FPS:{}", 1000 as f64/elapsed).as_bytes(), 10, 30);
+        game.start_time = unsafe {current_time()};
+        */
     }
     unsafe { request_animation_frame(); }
 }
