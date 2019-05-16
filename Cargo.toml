@@ -1,10 +1,13 @@
 [package]
 name = "spaceout"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Jia Ye <planet0104@gmail.com>"]
-
-[lib]
-path = "src/game.rs"
-crate-type = ["cdylib"]
+edition = "2018"
 
 [dependencies]
+mengine = { git = "https://github.com/planet0104/mengine" }
+
+[profile.release]
+lto = true
+opt-level = 's'
+panic = 'abort'
