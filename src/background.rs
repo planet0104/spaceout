@@ -1,5 +1,4 @@
 use super::rand_int;
-use mengine::engine::Point;
 use mengine::*;
 use std::cmp;
 
@@ -51,10 +50,10 @@ impl StarryBackground {
 
     pub fn draw(&self, g: &mut Graphics) {
         //绘制纯黑色背景
-        g.clear_rect(&[0, 0, 0, 255], 0., 0., self.width, self.height);
+        g.fill_rect(&[0, 0, 0, 255], 0., 0., self.width, self.height);
         //绘制星星
         for i in 0..self.num_stars {
-            g.clear_rect(
+            g.fill_rect(
                 &[
                     self.star_colors[i].0,
                     self.star_colors[i].1,

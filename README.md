@@ -1,6 +1,6 @@
 # SpaceOut游戏
 
->基于 nphysics2d, piston 和 stdweb
+>基于 nphysics2d, direct2d 和 stdweb
 
 >在线试玩：https://planet0104.github.io/spaceout/deploy/index.html
 

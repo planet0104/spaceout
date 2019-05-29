@@ -1,11 +1,11 @@
 [package]
 name = "spaceout"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Jia Ye <planet0104@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-mengine = { git = "https://github.com/planet0104/mengine" }
+mengine = { git = "https://github.com/planet0104/mengine", tag="0.6.5" }
 
 [profile.release]
 lto = true

@@ -3,34 +3,81 @@ mod alien_sprite;
 mod background;
 use background::StarryBackground;
 use engine::GameEngine;
-use engine::{Point, Rect, Resource, Sprite, BA_BOUNCE, BA_DIE, BA_WRAP};
+use engine::{Resource, Sprite, BA_BOUNCE, BA_DIE, BA_WRAP};
 use std::cell::RefCell;
 use std::cmp;
+use std::collections::HashMap;
 use std::rc::Rc;
 
-///游戏资源
-pub struct Resources {
-    img_splash: Rc<Image>,
-    img_desert: Rc<Image>,
-    img_car: Rc<Image>,
-    img_sm_car: Rc<Image>,
-    img_missile: Rc<Image>,
-    img_blobbo: Rc<Image>,
-    img_bmissile: Rc<Image>,
-    img_jelly: Rc<Image>,
-    img_jmissile: Rc<Image>,
-    img_timmy: Rc<Image>,
-    img_tmissile: Rc<Image>,
-    img_sm_explosion: Rc<Image>,
-    img_lg_explosion: Rc<Image>,
-    img_game_over: Rc<Image>,
+pub const ASSETS_SPLASH_BITMAP: &str = "Splash.png";
+pub const ASSETS_DESERT_BITMAP: &str = "Desert.png";
+pub const ASSETS_CAR_BITMAP: &str = "Car.png";
+pub const ASSETS_SM_CAR_BITMAP: &str = "SmCar.png";
+pub const ASSETS_MISSILE_BITMAP: &str = "Missile.png";
+pub const ASSETS_BLOBBO_BITMAP: &str = "Blobbo.png";
+pub const ASSETS_BMISSILE_BITMAP: &str = "BMissile.png";
+pub const ASSETS_JELLY_BITMAP: &str = "Jelly.png";
+pub const ASSETS_JMISSILE_BITMAP: &str = "JMissile.png";
+pub const ASSETS_TIMMY_BITMAP: &str = "Timmy.png";
+pub const ASSETS_TMISSILE_BITMAP: &str = "Tmissile.png";
+pub const ASSETS_SM_EXPLOSION_BITMAP: &str = "SmExplosion.png";
+pub const ASSETS_LG_EXPLOSION_BITMAP: &str = "LgExplosion.png";
+pub const ASSETS_GAME_OVER_BITMAP: &str = "GameOver.png";
 
-    sound_bmissile: RefCell<AssetsFile>,
-    sound_gameover: RefCell<AssetsFile>,
-    sound_jmissile: RefCell<AssetsFile>,
-    sound_lg_explode: RefCell<AssetsFile>,
-    sound_sm_explode: RefCell<AssetsFile>,
-    sound_missile: RefCell<AssetsFile>,
+pub const ASSETS_BMISSILE_SOUND: &str = "BMissile.ogg";
+pub const ASSETS_GAMEOVER_SOUND: &str = "GameOver.ogg";
+pub const ASSETS_JMISSILE_SOUND: &str = "JMissile.ogg";
+pub const ASSETS_LG_EXPLODE_SOUND: &str = "LgExplode.ogg";
+pub const ASSETS_SM_EXPLODE_SOUND: &str = "SmExplode.ogg";
+pub const ASSETS_MISSILE_SOUND: &str = "Missile.ogg";
+pub const PATH_BACKGROUND_MUSIC: &str = "Music.mp3";
+
+const RESOURCES: &'static [(&'static str, AssetsType); 20] = &[
+    (ASSETS_SPLASH_BITMAP, AssetsType::Image),
+    (ASSETS_DESERT_BITMAP, AssetsType::Image),
+    (ASSETS_CAR_BITMAP, AssetsType::Image),
+    (ASSETS_SM_CAR_BITMAP, AssetsType::Image),
+    (ASSETS_MISSILE_BITMAP, AssetsType::Image),
+    (ASSETS_BLOBBO_BITMAP, AssetsType::Image),
+    (ASSETS_BMISSILE_BITMAP, AssetsType::Image),
+    (ASSETS_JELLY_BITMAP, AssetsType::Image),
+    (ASSETS_JMISSILE_BITMAP, AssetsType::Image),
+    (ASSETS_TIMMY_BITMAP, AssetsType::Image),
+    (ASSETS_TMISSILE_BITMAP, AssetsType::Image),
+    (ASSETS_SM_EXPLOSION_BITMAP, AssetsType::Image),
+    (ASSETS_LG_EXPLOSION_BITMAP, AssetsType::Image),
+    (ASSETS_GAME_OVER_BITMAP, AssetsType::Image),
+    (ASSETS_BMISSILE_SOUND, AssetsType::Sound),
+    (ASSETS_GAMEOVER_SOUND, AssetsType::Sound),
+    (ASSETS_JMISSILE_SOUND, AssetsType::Sound),
+    (ASSETS_LG_EXPLODE_SOUND, AssetsType::Sound),
+    (ASSETS_SM_EXPLODE_SOUND, AssetsType::Sound),
+    (ASSETS_MISSILE_SOUND, AssetsType::Sound),
+];
+
+///游戏资源
+pub struct Stage {
+    img_splash: Image,
+    img_desert: Image,
+    img_car: Image,
+    img_sm_car: Image,
+    img_missile: Image,
+    img_blobbo: Image,
+    img_bmissile: Image,
+    img_jelly: Image,
+    img_jmissile: Image,
+    img_timmy: Image,
+    img_tmissile: Image,
+    img_sm_explosion: Image,
+    img_lg_explosion: Image,
+    img_game_over: Image,
+
+    _sound_bmissile: Sound,
+    sound_gameover: Sound,
+    _sound_jmissile: Sound,
+    sound_lg_explode: Sound,
+    sound_sm_explode: Sound,
+    sound_missile: Sound,
 }
 
 //触摸延迟
@@ -42,16 +89,17 @@ pub const CLIENT_HEIGHT: f64 = 450.0;
 pub struct SpaceOut {
     background: StarryBackground,
     fire_input_delay: i32,
-    last_touch: Option<Point>,
-    drive_left: i32,
-    drive_right: i32,
+    _last_touch: Option<Point>,
+    _drive_left: i32,
+    _drive_right: i32,
     sprites: Vec<Sprite>,
     car_sprite_id: f64,
     num_lives: i32,
     score: i32,
     demo: bool,
     difficulty: Rc<RefCell<i32>>,
-    resources: Rc<Resources>,
+    resources: HashMap<String, Assets>,
+    stage: Option<Stage>,
     game_over: bool,
     game_over_delay: i32,
 }
@@ -67,6 +115,7 @@ impl SpaceOut {
         self.num_lives = 3;
         self.difficulty = Rc::new(RefCell::new(80));
         self.game_over = false;
+        let stage = self.stage.as_mut().unwrap();
         if self.demo {
             //添加一些外星人
             for _ in 0..6 {
@@ -76,7 +125,7 @@ impl SpaceOut {
             //创建汽车
             let mut car_sprite = Sprite::with_bounds_action(
                 String::from("car"),
-                Resource::Static(self.resources.img_car.clone()),
+                Resource::Static(stage.img_car.clone()),
                 Rect::new(0.0, 0.0, CLIENT_WIDTH, CLIENT_HEIGHT),
                 BA_WRAP,
             );
@@ -84,7 +133,7 @@ impl SpaceOut {
             car_sprite.set_position(300.0, 405.0);
 
             self.add_sprite(car_sprite);
-            play_music("Music.mp3", true);
+            play_music(PATH_BACKGROUND_MUSIC, true);
         }
     }
 
@@ -92,9 +141,14 @@ impl SpaceOut {
     fn add_alien(&mut self) {
         //创建一个随机的外星人精灵
         let bounds = Rect::new(0.0, 0.0, CLIENT_WIDTH, 410.0);
-        let ext = alien_sprite::AlienSprite {
-            difficulty: self.difficulty.clone(),
-            resources: self.resources.clone(),
+        let ext = {
+            let stage = self.stage.as_ref().unwrap();
+            alien_sprite::AlienSprite {
+                difficulty: self.difficulty.clone(),
+                img_jmissile: stage.img_jmissile.clone(),
+                img_tmissile: stage.img_tmissile.clone(),
+                img_bmissile: stage.img_bmissile.clone(),
+            }
         };
         self.add_sprite(match rand_int(0, 4) {
             1 => {
@@ -103,7 +157,11 @@ impl SpaceOut {
                 for y in (0..272).step_by(34) {
                     frames.push([0., y as f64, 32., 34.]);
                 }
-                let mut anim = Animation::active(self.resources.img_blobbo.clone(), frames, 25.0);
+                let mut anim = Animation::active(
+                    self.stage.as_ref().unwrap().img_blobbo.clone(),
+                    frames,
+                    25.0,
+                );
                 anim.set_repeat(true);
 
                 let mut sprite = Sprite::with_bounds_action(
@@ -129,7 +187,8 @@ impl SpaceOut {
                 for y in (0..264).step_by(33) {
                     frames.push([0., y as f64, 33., 33.]);
                 }
-                let mut anim = Animation::active(self.resources.img_jelly.clone(), frames, 25.0);
+                let mut anim =
+                    Animation::active(self.stage.as_ref().unwrap().img_jelly.clone(), frames, 25.0);
                 anim.set_repeat(true);
 
                 let mut sprite = Sprite::with_bounds_action(
@@ -152,7 +211,9 @@ impl SpaceOut {
                 for y in (0..136).step_by(17) {
                     frames.push([0., y as f64, 33., 17.]);
                 }
-                let mut anim = Animation::active(self.resources.img_timmy.clone(), frames, 25.0);
+
+                let mut anim =
+                    Animation::active(self.stage.as_ref().unwrap().img_timmy.clone(), frames, 25.0);
                 anim.set_repeat(true);
 
                 let mut sprite = Sprite::with_bounds_action(
@@ -171,96 +232,182 @@ impl SpaceOut {
             }
         });
     }
-
-    //显示资源加载进度
-    // fn on_load_resource_progress(current:i32, total:i32){
-    //     let percent = current as f32 / total as f32;
-    //     let bar_width = 300;
-    //     let bar_height = 26;
-    //     let bar_left = CLIENT_WIDTH/2-bar_width/2;
-    //     let bar_top = CLIENT_HEIGHT/2-bar_height/2;
-    //     unsafe{
-    //         fill_style_rgb(200, 200, 200);
-    //         fill_rect(bar_left, bar_top, bar_width, bar_height);
-    //         fill_style_rgb(120, 120, 255);
-    //         fill_rect(bar_left, bar_top, (bar_width as f32*percent) as i32, bar_height);
-    //     }
-    // }
 }
 
 impl State for SpaceOut {
-    fn new(image_loader: &mut ImageLoader) -> Self {
-        let resources = Rc::new(Resources {
-            img_splash: image_loader.load("Splash.png").unwrap(),
-            img_desert: image_loader.load("Desert.png").unwrap(),
-            img_car: image_loader.load("Car.png").unwrap(),
-            img_sm_car: image_loader.load("SmCar.png").unwrap(),
-            img_missile: image_loader.load("Missile.png").unwrap(),
-            img_blobbo: image_loader.load("Blobbo.png").unwrap(),
-            img_bmissile: image_loader.load("BMissile.png").unwrap(),
-            img_jelly: image_loader.load("Jelly.png").unwrap(),
-            img_jmissile: image_loader.load("JMissile.png").unwrap(),
-            img_timmy: image_loader.load("Timmy.png").unwrap(),
-            img_tmissile: image_loader.load("TMissile.png").unwrap(),
-            img_sm_explosion: image_loader.load("SmExplosion.png").unwrap(),
-            img_lg_explosion: image_loader.load("LgExplosion.png").unwrap(),
-            img_game_over: image_loader.load("GameOver.png").unwrap(),
-
-            sound_bmissile: {
-                let mut assets = AssetsFile::new("BMissile.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-            sound_gameover: {
-                let mut assets = AssetsFile::new("GameOver.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-            sound_jmissile: {
-                let mut assets = AssetsFile::new("JMissile.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-            sound_lg_explode: {
-                let mut assets = AssetsFile::new("LgExplode.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-            sound_sm_explode: {
-                let mut assets = AssetsFile::new("SmExplode.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-            sound_missile: {
-                let mut assets = AssetsFile::new("Missile.ogg");
-                assets.load();
-                RefCell::new(assets)
-            },
-        });
-
-        let mut spaceout = SpaceOut {
+    fn new(window: &mut Window) -> Self {
+        window.load_assets(RESOURCES.to_vec());
+        SpaceOut {
             background: StarryBackground::default(CLIENT_WIDTH, CLIENT_HEIGHT),
             fire_input_delay: 0,
-            last_touch: None,
-            drive_left: 0,
-            drive_right: 0,
+            _last_touch: None,
+            _drive_left: 0,
+            _drive_right: 0,
             sprites: vec![],
             car_sprite_id: 0.0,
             num_lives: 3,
             score: 0,
             demo: true,
-            resources,
+            resources: HashMap::new(),
+            stage: None,
             difficulty: Rc::new(RefCell::new(80)),
             game_over: false,
             game_over_delay: 0,
-        };
-        spaceout.new_game();
-        spaceout
+        }
     }
 
-    fn event(&mut self, event: Event) {
+    fn on_assets_load(
+        &mut self,
+        path: &str,
+        _: AssetsType,
+        assets: std::io::Result<Assets>,
+        _window: &mut Window,
+    ) {
+        match assets {
+            Ok(assets) => {
+                self.resources.insert(path.to_string(), assets);
+
+                if self.resources.len() == RESOURCES.len() {
+                    self.stage = Some(Stage {
+                        img_splash: self
+                            .resources
+                            .get(ASSETS_SPLASH_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_desert: self
+                            .resources
+                            .get(ASSETS_DESERT_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_car: self
+                            .resources
+                            .get(ASSETS_CAR_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_sm_car: self
+                            .resources
+                            .get(ASSETS_SM_CAR_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_missile: self
+                            .resources
+                            .get(ASSETS_MISSILE_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_blobbo: self
+                            .resources
+                            .get(ASSETS_BLOBBO_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_bmissile: self
+                            .resources
+                            .get(ASSETS_BMISSILE_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_jelly: self
+                            .resources
+                            .get(ASSETS_JELLY_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_jmissile: self
+                            .resources
+                            .get(ASSETS_JMISSILE_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_timmy: self
+                            .resources
+                            .get(ASSETS_TIMMY_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_tmissile: self
+                            .resources
+                            .get(ASSETS_TMISSILE_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_sm_explosion: self
+                            .resources
+                            .get(ASSETS_SM_EXPLOSION_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_lg_explosion: self
+                            .resources
+                            .get(ASSETS_LG_EXPLOSION_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+                        img_game_over: self
+                            .resources
+                            .get(ASSETS_GAME_OVER_BITMAP)
+                            .unwrap()
+                            .as_image()
+                            .unwrap(),
+
+                        _sound_bmissile: self
+                            .resources
+                            .get(ASSETS_BMISSILE_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                        sound_gameover: self
+                            .resources
+                            .get(ASSETS_GAMEOVER_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                        _sound_jmissile: self
+                            .resources
+                            .get(ASSETS_JMISSILE_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                        sound_lg_explode: self
+                            .resources
+                            .get(ASSETS_LG_EXPLODE_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                        sound_sm_explode: self
+                            .resources
+                            .get(ASSETS_SM_EXPLODE_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                        sound_missile: self
+                            .resources
+                            .get(ASSETS_MISSILE_SOUND)
+                            .unwrap()
+                            .as_sound()
+                            .unwrap(),
+                    });
+
+                    self.new_game();
+                }
+            }
+            Err(err) => alert(
+                "温馨提示",
+                &format!("资源文件加载失败:{:?} {:?}", path, err).as_str(),
+            ),
+        }
+    }
+
+    fn event(&mut self, event: Event, _window: &mut Window) {
+        if self.stage.is_none() {
+            return;
+        }
         match event {
-            Event::KeyPress(key) => {
+            Event::KeyUp(key) => {
                 if key.to_lowercase() == "enter" {
                     //如果游戏没有开始，启动游戏
                     if self.demo || self.game_over {
@@ -284,7 +431,7 @@ impl State for SpaceOut {
                 //创建一个新的导弹精灵
                 let mut sprite = Sprite::with_bounds_action(
                     String::from("missile"),
-                    Resource::Static(self.resources.img_missile.clone()),
+                    Resource::Static(self.stage.as_ref().unwrap().img_missile.clone()),
                     Rect::new(0.0, 0.0, CLIENT_WIDTH, CLIENT_HEIGHT),
                     BA_DIE,
                 );
@@ -293,10 +440,7 @@ impl State for SpaceOut {
                 self.add_sprite(sprite);
 
                 //播放导弹发射声音
-                mengine::play_sound(
-                    &mut *self.resources.sound_missile.borrow_mut(),
-                    AudioType::OGG,
-                );
+                mengine::play_sound(&self.stage.as_ref().unwrap().sound_missile);
             }
             Event::MouseMove(x, _y) => {
                 if self.demo {
@@ -335,39 +479,79 @@ impl State for SpaceOut {
                 //     _ => self.last_touch = Some(Point{x:x, y:y})
                 // }
             }
+            _ => (),
         }
     }
 
-    fn draw(&mut self, g: &mut Graphics) -> Result<(), String> {
+    fn draw(&mut self, g: &mut Graphics, _window: &mut Window) {
+        if self.stage.is_none() {
+            let progress_bar_height = 30.0;
+            let progress_bar_width = CLIENT_WIDTH * 0.8;
+            let progress_bar_x = (CLIENT_WIDTH - progress_bar_width) / 2.0;
+            let progress_bar_y = CLIENT_HEIGHT / 2.0;
+            //进度条背景
+            g.fill_rect(
+                &[127, 127, 127, 255],
+                progress_bar_x,
+                progress_bar_y,
+                progress_bar_width,
+                progress_bar_height,
+            );
+            //进度条前景
+            let progress = self.resources.len() as f64 / RESOURCES.len() as f64;
+            g.fill_rect(
+                &[10, 10, 128, 255],
+                progress_bar_x,
+                progress_bar_y,
+                progress * progress_bar_width,
+                progress_bar_height,
+            );
+            g.draw_text(
+                &format!("Loading {}%", (progress * 100.0) as i32),
+                progress_bar_x + 20.0,
+                progress_bar_y + 2.0,
+                &[255, 255, 255, 255],
+                16,
+            );
+            return;
+        }
+
         //绘制背景
         self.background.draw(g);
         //绘制沙漠
-        g.draw_image(
-            self.resources.img_desert.as_ref(),
-            None,
-            Some([
-                0.0,
-                371.0,
-                self.resources.img_desert.width(),
-                self.resources.img_desert.height(),
-            ]),
-        )?;
+        {
+            let stage = self.stage.as_ref().unwrap();
+            g.draw_image(
+                None,
+                &stage.img_desert,
+                None,
+                Some([
+                    0.0,
+                    371.0,
+                    stage.img_desert.width(),
+                    stage.img_desert.height(),
+                ]),
+            );
+        }
 
         //绘制精灵
-        self.draw_sprites(g)?;
+        self.draw_sprites(g);
+
+        let stage = self.stage.as_ref().unwrap();
 
         if self.demo {
             //绘制闪屏图片
             g.draw_image(
-                self.resources.img_splash.as_ref(),
+                None,
+                &stage.img_splash,
                 None,
                 Some([
                     142.0,
                     30.0,
-                    self.resources.img_splash.width(),
-                    self.resources.img_splash.height(),
+                    stage.img_splash.width(),
+                    stage.img_splash.height(),
                 ]),
-            )?;
+            );
 
             //绘制控制说明
             g.draw_text(
@@ -376,9 +560,9 @@ impl State for SpaceOut {
                 300.0,
                 &[255, 255, 255, 255],
                 13,
-            )?;
-            g.draw_text("左滑->倒车", 260.0, 330.0, &[255, 255, 255, 255], 13)?;
-            g.draw_text("右滑->前进", 260.0, 360.0, &[255, 255, 255, 255], 13)?;
+            );
+            g.draw_text("左滑->倒车", 260.0, 330.0, &[255, 255, 255, 255], 13);
+            g.draw_text("右滑->前进", 260.0, 360.0, &[255, 255, 255, 255], 13);
         } else {
             //绘制得分
             g.draw_text(
@@ -387,38 +571,42 @@ impl State for SpaceOut {
                 90.0,
                 &[255, 255, 255, 255],
                 13,
-            )?;
+            );
 
             //绘制剩余生命
             for i in 0..self.num_lives {
                 g.draw_image(
-                    self.resources.img_sm_car.as_ref(),
+                    None,
+                    &stage.img_sm_car,
                     None,
                     Some([
                         520. + 25. * i as f64,
                         10.0,
-                        self.resources.img_sm_car.width(),
-                        self.resources.img_sm_car.height(),
+                        stage.img_sm_car.width(),
+                        stage.img_sm_car.height(),
                     ]),
-                )?;
+                );
             }
             if self.game_over {
                 g.draw_image(
-                    self.resources.img_game_over.as_ref(),
+                    None,
+                    &stage.img_game_over,
                     None,
                     Some([
                         170.,
                         100.0,
-                        self.resources.img_game_over.width(),
-                        self.resources.img_game_over.height(),
+                        stage.img_game_over.width(),
+                        stage.img_game_over.height(),
                     ]),
-                )?;
+                );
             }
         }
-        Ok(())
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, _window: &mut Window) {
+        if self.stage.is_none() {
+            return;
+        }
         if !self.game_over {
             if !self.demo {
                 // 随机添加外星人
@@ -453,23 +641,21 @@ impl GameEngine for SpaceOut {
     }
     //精灵死亡处理
     fn sprite_dying(&mut self, sprite_dying_id: usize) {
+        let stage = self.stage.as_ref().unwrap();
         //检查是否子弹精灵死亡
         if self.sprites[sprite_dying_id].name() == "missile"
             || self.sprites[sprite_dying_id].name() == "amissile"
         {
             //播放小的爆炸声音
             if !self.demo {
-                mengine::play_sound(
-                    &mut *self.resources.sound_sm_explode.borrow_mut(),
-                    AudioType::OGG,
-                );
+                mengine::play_sound(&stage.sound_sm_explode);
             }
             //在子弹位置创建一个小的爆炸精灵
             let mut frames = vec![];
             for y in (0..136).step_by(17) {
                 frames.push([0., y as f64, 17., 17.]);
             }
-            let anim = Animation::active(self.resources.img_sm_explosion.clone(), frames, 25.0);
+            let anim = Animation::active(stage.img_sm_explosion.clone(), frames, 25.0);
 
             let mut sprite = Sprite::from_bitmap(
                 String::from("sm_explosion"),
@@ -493,10 +679,7 @@ impl GameEngine for SpaceOut {
             || hittee == "missile" && (hitter == "blobbo" || hitter == "jelly" || hitter == "timmy")
         {
             //播放小的爆炸声音
-            mengine::play_sound(
-                &mut self.resources.sound_sm_explode.borrow_mut(),
-                AudioType::OGG,
-            );
+            mengine::play_sound(&self.stage.as_ref().unwrap().sound_sm_explode);
             //杀死子弹和外星人
             self.sprites[sprite_hitter_id].kill();
             self.sprites[sprite_hittee_id].kill();
@@ -512,7 +695,11 @@ impl GameEngine for SpaceOut {
             for y in (0..272).step_by(34) {
                 frames.push([0., y as f64, 33., 34.]);
             }
-            let anim = Animation::active(self.resources.img_lg_explosion.clone(), frames, 25.0);
+            let anim = Animation::active(
+                self.stage.as_ref().unwrap().img_lg_explosion.clone(),
+                frames,
+                25.0,
+            );
 
             let mut sprite = Sprite::from_bitmap(
                 String::from("lg_explosion"),
@@ -529,10 +716,7 @@ impl GameEngine for SpaceOut {
         //检查是否有外星人子弹撞到汽车
         if hitter == "car" && hittee == "amissile" || hittee == "car" && hitter == "amissile" {
             //播放大的爆炸声音
-            mengine::play_sound(
-                &mut *self.resources.sound_lg_explode.borrow_mut(),
-                AudioType::OGG,
-            );
+            mengine::play_sound(&self.stage.as_ref().unwrap().sound_lg_explode);
             //杀死子弹精灵
             if hitter == "car" {
                 self.sprites[sprite_hittee_id].kill();
@@ -551,7 +735,11 @@ impl GameEngine for SpaceOut {
             for y in (0..272).step_by(34) {
                 frames.push([0., y as f64, 33., 34.]);
             }
-            let anim = Animation::active(self.resources.img_lg_explosion.clone(), frames, 25.0);
+            let anim = Animation::active(
+                self.stage.as_ref().unwrap().img_lg_explosion.clone(),
+                frames,
+                25.0,
+            );
 
             let mut sprite = Sprite::from_bitmap(
                 String::from("lg_explosion"),
@@ -570,10 +758,7 @@ impl GameEngine for SpaceOut {
             //检查游戏是否结束
             if self.num_lives == 0 {
                 //播放游戏结束声音
-                mengine::play_sound(
-                    &mut *self.resources.sound_gameover.borrow_mut(),
-                    AudioType::OGG,
-                );
+                mengine::play_sound(&self.stage.as_ref().unwrap().sound_gameover);
                 self.game_over = true;
                 self.game_over_delay = 150;
             }
@@ -588,7 +773,6 @@ fn main() {
         CLIENT_WIDTH,
         CLIENT_HEIGHT,
         Settings {
-            font_file: Some("wqy-micro-hei.ttf"),
             ups: 30,
             auto_scale: true,
             ..Default::default()

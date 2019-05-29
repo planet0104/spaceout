@@ -1,14 +1,14 @@
-use super::{rand_int, Resources};
-use mengine::engine::{
-    Point, Rect, Resource, Sprite, SpriteExt, BA_DIE, SA_ADDSPRITE, SPRITEACTION,
-};
+use mengine::engine::{Resource, Sprite, SpriteExt, BA_DIE, SA_ADDSPRITE, SPRITEACTION};
+use mengine::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 //外星人精灵扩展
 
 pub struct AlienSprite {
-    pub resources: Rc<Resources>,
+    pub img_bmissile: Image,
+    pub img_jmissile: Image,
+    pub img_tmissile: Image,
     pub difficulty: Rc<RefCell<i32>>,
 }
 
@@ -30,15 +30,15 @@ impl SpriteExt for AlienSprite {
         let missile_bitmap = match sprite.name() {
             "blobbo" => {
                 velocity.y = 7.0;
-                self.resources.img_bmissile.clone()
+                self.img_bmissile.clone()
             }
             "jelly" => {
                 velocity.y = 5.0;
-                self.resources.img_jmissile.clone()
+                self.img_jmissile.clone()
             }
             _ => {
                 velocity.y = 3.0;
-                self.resources.img_tmissile.clone()
+                self.img_tmissile.clone()
             }
         };
         let mut sub_sprite = Sprite::with_bounds_action(
