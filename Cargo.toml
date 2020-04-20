@@ -5,9 +5,11 @@ authors = ["Jia Ye <planet0104@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-mengine = { git = "https://github.com/planet0104/mengine", tag="0.6.5" }
+mengine = { git = "https://github.com/planet0104/mengine", tag="0.6.6" }
+neat = { git = "https://github.com/planet0104/neat", tag="1.0.2" }
+math2d = "0.2.0-alpha8"
 
 [profile.release]
-lto = true
-opt-level = 's'
-panic = 'abort'
+# lto = true
+# opt-level = 's'
+# panic = 'abort'

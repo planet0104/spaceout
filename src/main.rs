@@ -1,4 +1,5 @@
 use mengine::*;
+mod ai;
 mod alien_sprite;
 mod background;
 use background::StarryBackground;
@@ -8,6 +9,8 @@ use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::rc::Rc;
+use ai::{Turn, CarBrain};
+use math2d::Vector2f;
 
 pub const ASSETS_SPLASH_BITMAP: &str = "Splash.png";
 pub const ASSETS_DESERT_BITMAP: &str = "Desert.png";
@@ -102,6 +105,10 @@ pub struct SpaceOut {
     stage: Option<Stage>,
     game_over: bool,
     game_over_delay: i32,
+    brain: CarBrain,
+    fast_mode: bool,
+    next_print_time: f64,
+    car_missile_count: i32,//最多10发导弹
 }
 
 impl SpaceOut {
@@ -116,23 +123,25 @@ impl SpaceOut {
         self.difficulty = Rc::new(RefCell::new(80));
         self.game_over = false;
         let stage = self.stage.as_mut().unwrap();
+
+        //创建汽车
+        let mut car_sprite = Sprite::with_bounds_action(
+            String::from("car"),
+            Resource::Static(stage.img_car.clone()),
+            Rect::new(40.0, 0.0, CLIENT_WIDTH-40.0, CLIENT_HEIGHT),
+            BA_WRAP,
+        );
+        self.car_sprite_id = car_sprite.id();
+        car_sprite.set_position(300.0, 405.0);
+
+        self.add_sprite(car_sprite);
+
         if self.demo {
             //添加一些外星人
             for _ in 0..6 {
                 self.add_alien();
             }
         } else {
-            //创建汽车
-            let mut car_sprite = Sprite::with_bounds_action(
-                String::from("car"),
-                Resource::Static(stage.img_car.clone()),
-                Rect::new(0.0, 0.0, CLIENT_WIDTH, CLIENT_HEIGHT),
-                BA_WRAP,
-            );
-            self.car_sprite_id = car_sprite.id();
-            car_sprite.set_position(300.0, 405.0);
-
-            self.add_sprite(car_sprite);
             play_music(PATH_BACKGROUND_MUSIC, true);
         }
     }
@@ -150,7 +159,7 @@ impl SpaceOut {
                 img_bmissile: stage.img_bmissile.clone(),
             }
         };
-        self.add_sprite(match rand_int(0, 4) {
+        self.add_sprite(match 2 {
             1 => {
                 // Blobbo
                 let mut frames = vec![];
@@ -253,6 +262,10 @@ impl State for SpaceOut {
             difficulty: Rc::new(RefCell::new(80)),
             game_over: false,
             game_over_delay: 0,
+            brain: CarBrain::new(),
+            fast_mode: false,
+            next_print_time: current_timestamp()+2000.0,
+            car_missile_count: 0,
         }
     }
 
@@ -402,7 +415,7 @@ impl State for SpaceOut {
         }
     }
 
-    fn event(&mut self, event: Event, _window: &mut Window) {
+    fn event(&mut self, event: Event, window: &mut Window) {
         if self.stage.is_none() {
             return;
         }
@@ -410,14 +423,28 @@ impl State for SpaceOut {
             Event::KeyUp(key) => {
                 if key.to_lowercase() == "enter" {
                     //如果游戏没有开始，启动游戏
-                    if self.demo || self.game_over {
-                        self.demo = false;
-                        self.new_game();
-                        return;
+                    // if self.demo || self.game_over {
+                    //     self.demo = false;
+                    //     self.new_game();
+                    //     return;
+                    // }
+                }
+                if key.to_lowercase() == "space"{
+                    if self.demo{
+                        self.fast_mode = !self.fast_mode;
+                        if self.fast_mode{
+                            self.brain.use_best(false);
+                            window.set_update_rate(90000);
+                        }else{
+                            //选择最好的网络进行控制
+                            self.brain.use_best(true);
+                            window.set_update_rate(30);
+                        }
                     }
                 }
             }
             Event::Click(_x, _y) => {
+                return;
                 //如果游戏没有开始，启动游戏
                 if self.demo || self.game_over {
                     if self.game_over_delay == 0 {
@@ -563,6 +590,9 @@ impl State for SpaceOut {
             );
             g.draw_text("左滑->倒车", 260.0, 330.0, &[255, 255, 255, 255], 13);
             g.draw_text("右滑->前进", 260.0, 360.0, &[255, 255, 255, 255], 13);
+
+            //显示AI信息
+            g.draw_text(&format!("Generation:{}, Brain:{} 最高分:{}", self.brain.current_generation(), self.brain.current_brain(), self.brain.max_score()), 5.0, 5.0, &[255, 255, 255, 255], 13);
         } else {
             //绘制得分
             g.draw_text(
@@ -619,6 +649,96 @@ impl State for SpaceOut {
 
             //更新精灵
             self.update_sprites();
+            
+            //更新AI
+
+            //计算距离最近的外星人子弹
+            let mut closest_alien_so_far = 99999.0;
+            let mut closest_missile_so_far = 99999.0;
+            let mut colosest_alien_pos = (0.0, 0.0);
+            let mut colosest_missile_pos = (0.0, 0.0);
+            let rect = *self.get_sprite(self.car_sprite_id).unwrap().position();
+            if current_timestamp()>self.next_print_time{
+                self.next_print_time = current_timestamp()+2000.0;
+                println!("汽车位置={:?}", rect.left);
+            }
+            let car_pos = Vector2f::new((rect.left+(rect.right-rect.left)/2.0) as f32, (rect.top+(rect.bottom-rect.top)/2.0) as f32);
+            for sprite in &self.sprites{
+                if sprite.name() == "blobbo"
+                    || sprite.name() == "jelly"
+                    || sprite.name() == "timmy"{
+                    let rect = sprite.position();
+                    let (center_x, center_y) = ((rect.left+(rect.right-rect.left)/2.0) as f32, (rect.top+(rect.bottom-rect.top)/2.0) as f32);
+                    let mpos = Vector2f::new(center_x,  center_y);
+                    let len_to_object = (mpos-car_pos).len();
+                    if len_to_object < closest_alien_so_far {
+                        closest_alien_so_far = len_to_object;
+                        colosest_alien_pos = (mpos.x, mpos.y);
+                    }
+                }
+                if sprite.name() == "amissile"{
+                    let rect = sprite.position();
+                    let (center_x, center_y) = ((rect.left+(rect.right-rect.left)/2.0) as f32, (rect.top+(rect.bottom-rect.top)/2.0) as f32);
+                    let mpos = Vector2f::new(center_x,  center_y);
+                    let len_to_object = (mpos-car_pos).len();
+                    if len_to_object < closest_missile_so_far {
+                        closest_missile_so_far = len_to_object;
+                        colosest_missile_pos = (mpos.x, mpos.y);
+                    }
+                }
+            }
+            let turn = self.brain.update(
+                car_pos.x as f64/CLIENT_WIDTH,
+                colosest_alien_pos.0 as f64/CLIENT_WIDTH, colosest_alien_pos.1 as f64/CLIENT_HEIGHT,
+                colosest_missile_pos.0 as f64/CLIENT_WIDTH, colosest_missile_pos.1 as f64/CLIENT_HEIGHT,
+                );
+            // println!("最近位置{:?} 最近距离:{:?} 汽车位置:{:?} 转向:{:?}", closest_missile_pos, closest_so_far, (car_pos.x, car_pos.y), turn);
+            let (turn, fire) = turn;
+            if fire && self.car_missile_count<10{
+                let car_left_pos = self.get_sprite(self.car_sprite_id).unwrap().position().left;
+                //创建一个新的导弹精灵
+                let mut sprite = Sprite::with_bounds_action(
+                    String::from("missile"),
+                    Resource::Static(self.stage.as_ref().unwrap().img_missile.clone()),
+                    Rect::new(0.0, 0.0, CLIENT_WIDTH, CLIENT_HEIGHT),
+                    BA_DIE,
+                );
+                sprite.set_position(car_left_pos + 15.0, 400.0);
+                sprite.set_velocity(0.0, -7.0);
+                self.add_sprite(sprite);
+                self.car_missile_count += 1;
+            }
+            let car = self.get_sprite(self.car_sprite_id).unwrap();
+            let (vx, vy) = (car.velocity().x as i32, car.velocity().y);
+            match turn{
+                Turn::Left => {
+                    car.set_velocity(cmp::max(vx-2, -6) as f64, vy);
+                    // self.get_sprite(self.car_sprite_id).unwrap().set_velocity(-6.0, 0.0);
+                },
+                Turn::Right => {
+                    car.set_velocity(cmp::min(vx+2, 6) as f64, vy);
+                    // self.get_sprite(self.car_sprite_id).unwrap().set_velocity(6.0, 0.0);
+                }
+            }
+
+            //如果距离小于50，汽车死亡，重新开始demo
+            // if closest_alien_so_far<50.0 || closest_missile_so_far<50.0{
+            //     // println!("汽车死亡！");
+            //     //通知AI汽车死亡
+            //     self.brain.car_dying();
+            //     // for s in &mut self.sprites{
+            //     //      if s.name() != "car"{
+            //     //          s.kill();
+            //     //      }
+            //     // }
+            //     self.sprites.retain(|s|{
+            //         s.name() == "car"
+            //     });
+            //     for _ in 0..6 {
+            //         self.add_alien();
+            //     }
+            // }
+            
         } else {
             self.game_over_delay -= 1;
             if self.game_over_delay == 0 {
@@ -641,11 +761,24 @@ impl GameEngine for SpaceOut {
     }
     //精灵死亡处理
     fn sprite_dying(&mut self, sprite_dying_id: usize) {
+        //外星人死亡 添加一个新的外星人
+        
+        if self.sprites[sprite_dying_id].name() == "blobbo"
+                    || self.sprites[sprite_dying_id].name() == "jelly"
+                    || self.sprites[sprite_dying_id].name() == "timmy"{
+            self.add_alien();
+        }
         let stage = self.stage.as_ref().unwrap();
+
         //检查是否子弹精灵死亡
         if self.sprites[sprite_dying_id].name() == "missile"
             || self.sprites[sprite_dying_id].name() == "amissile"
         {
+            
+            if self.demo && self.sprites[sprite_dying_id].name() == "missile"{
+                self.car_missile_count -= 1;
+            }
+
             //播放小的爆炸声音
             if !self.demo {
                 mengine::play_sound(&stage.sound_sm_explode);
@@ -711,7 +844,7 @@ impl GameEngine for SpaceOut {
 
             //更新得分
             self.score += 25;
-            *self.difficulty.borrow_mut() = cmp::max(80 - (self.score / 20), 20);
+            // *self.difficulty.borrow_mut() = cmp::max(80 - (self.score / 20), 20);
         }
         //检查是否有外星人子弹撞到汽车
         if hitter == "car" && hittee == "amissile" || hittee == "car" && hitter == "amissile" {
@@ -753,14 +886,21 @@ impl GameEngine for SpaceOut {
             self.get_sprite(self.car_sprite_id)
                 .unwrap()
                 .set_position(30.0, 405.0);
-            self.num_lives -= 1;
 
-            //检查游戏是否结束
-            if self.num_lives == 0 {
-                //播放游戏结束声音
-                mengine::play_sound(&self.stage.as_ref().unwrap().sound_gameover);
-                self.game_over = true;
-                self.game_over_delay = 150;
+            if self.demo{
+                //通知AI汽车死亡
+                self.brain.car_dying(self.score);
+                return false;
+            }else{
+                self.num_lives -= 1;
+
+                //检查游戏是否结束
+                if self.num_lives == 0 {
+                    //播放游戏结束声音
+                    mengine::play_sound(&self.stage.as_ref().unwrap().sound_gameover);
+                    self.game_over = true;
+                    self.game_over_delay = 150;
+                }
             }
         }
         false
@@ -774,6 +914,7 @@ fn main() {
         CLIENT_HEIGHT,
         Settings {
             ups: 30,
+            window_size: Some((300., 300.)),
             auto_scale: true,
             ..Default::default()
         },

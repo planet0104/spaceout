@@ -19,6 +19,7 @@ impl SpriteExt for AlienSprite {
             0 => sprite_action | SA_ADDSPRITE,
             _ => sprite_action,
         }
+        // sprite_action
     }
 
     fn add_sprite(&self, sprite: &Sprite) -> Sprite {

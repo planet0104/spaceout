@@ -24,7 +24,7 @@
 </head>
 <body>
     <script>
-		const supported = (() => {
+		const supported = function() {
 			try {
 				if (typeof WebAssembly === "object"
 					&& typeof WebAssembly.instantiate === "function") {
@@ -35,7 +35,8 @@
 			} catch (e) {
 			}
 			return false;
-		})();
+		}();
+		// var supported = false;
 		
 		var script = document.createElement("script");
 		if(supported){
